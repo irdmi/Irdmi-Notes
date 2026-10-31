@@ -1,0 +1,716 @@
+/* =========================================================
+   Домашняя библиотека — style.css
+   Уютная пиксель/полупиксель библиотека: дерево, бумага,
+   тёплый свет. Кнопки-рамки в духе Minecraft (чистый CSS,
+   без ассетов Mojang). Desktop-first.
+   ========================================================= */
+
+/* ---------- 1. Переменные и базовые настройки ---------- */
+:root{
+  /* Геометрия разворота книги (меняется в медиазапросах) */
+  --half-w: 440px;          /* половина разворота = страница */
+  --spread-h: 560px;        /* высота книги */
+  --pad-x: 34px;            /* поля страницы по горизонтали */
+  --pad-top: 30px;
+  --pad-bottom: 46px;
+
+  /* Палитра */
+  --paper-1:#f4e9cd;        /* светлая бумага */
+  --paper-2:#e6d4a9;        /* бумага в тени */
+  --ink:#3d2f20;            /* чернила */
+  --wood-1:#8a5a33;         /* светлое дерево */
+  --wood-2:#6b4322;         /* тёмное дерево */
+  --wood-edge:#241505;      /* контур дерева */
+  --wall-1:#33241a;         /* стена */
+  --wall-2:#241709;
+  --gold:#d9a441;           /* тёплое золото */
+  --glow:rgba(255,200,120,.18);
+  --btn-face-1:#7a5c3e;     /* кнопки */
+  --btn-face-2:#5f4630;
+  --btn-ink:#ffe9c9;
+
+  /* Шрифты: пиксельный для интерфейса, книжная сериф-гарнитура для страниц */
+  --font-pixel:'Press Start 2P', ui-monospace, 'Courier New', monospace;
+  --font-book: Georgia, 'PT Serif', 'Times New Roman', serif;
+}
+
+*{ box-sizing:border-box; }
+[hidden]{ display:none !important; }
+
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:var(--font-pixel);
+  color:#ffe9c9;
+  /* Стена библиотеки: тёплое пятно света сверху + деревянные панели */
+  background:
+    radial-gradient(1100px 520px at 50% -8%, rgba(255,196,110,.20), transparent 62%),
+    radial-gradient(700px 400px at 12% 0%, rgba(255,170,80,.10), transparent 60%),
+    radial-gradient(700px 400px at 88% 0%, rgba(255,170,80,.10), transparent 60%),
+    repeating-linear-gradient(0deg, #2e2015 0 70px, #291c12 70px 74px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 130px),
+    linear-gradient(180deg, var(--wall-1), var(--wall-2));
+  background-attachment:fixed;
+  min-height:100vh;
+}
+/* Тёмный «пол» внизу экрана */
+body::after{
+  content:''; position:fixed; left:0; right:0; bottom:0; height:110px;
+  background:linear-gradient(180deg, transparent, rgba(0,0,0,.5));
+  pointer-events:none; z-index:1;
+}
+
+::selection{ background:rgba(217,164,65,.45); color:#fff; }
+
+/* Уютные тонкие скроллбары */
+*::-webkit-scrollbar{ width:10px; height:10px; }
+*::-webkit-scrollbar-track{ background:rgba(0,0,0,.25); }
+*::-webkit-scrollbar-thumb{ background:linear-gradient(var(--wood-1),var(--wood-2)); border:2px solid var(--wood-edge); }
+
+:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+/* ---------- 2. Свет, пылинки, фонарики ---------- */
+#dust{ position:fixed; inset:0; pointer-events:none; z-index:2; overflow:hidden; }
+#dust i{
+  position:absolute; bottom:-10px;
+  width:3px; height:3px; border-radius:50%;
+  background:rgba(255,225,170,.55);
+  box-shadow:0 0 6px rgba(255,210,140,.5);
+  animation:dust-float linear infinite;
+}
+@keyframes dust-float{
+  0%   { transform:translateY(0) translateX(0); opacity:0; }
+  8%   { opacity:.8; }
+  92%  { opacity:.5; }
+  100% { transform:translateY(-108vh) translateX(46px); opacity:0; }
+}
+
+.lantern{
+  position:fixed; top:-6px; z-index:3; font-size:34px;
+  filter:drop-shadow(0 0 18px rgba(255,170,80,.55));
+  animation:sway 5s ease-in-out infinite;
+  pointer-events:none;
+}
+.lantern::before{ /* верёвочка */
+  content:''; position:absolute; left:50%; top:-4px; width:2px; height:14px;
+  background:#1c120a; transform:translateX(-50%);
+}
+.lantern.left{ left:5%; }
+.lantern.right{ right:5%; animation-delay:-2.5s; }
+@keyframes sway{ 0%,100%{ transform:rotate(-4deg);} 50%{ transform:rotate(4deg);} }
+
+/* ---------- 3. Комната (контейнер) ---------- */
+.room{
+  position:relative; z-index:4;
+  max-width:1440px; margin:0 auto;
+  padding:0 22px 30px;
+  display:flex; flex-direction:column; gap:16px;
+}
+
+/* ---------- 4. Кнопки в духе Minecraft (чистый CSS-бевел) ---------- */
+.btn{
+  font:9px/1.4 var(--font-pixel);
+  color:var(--btn-ink);
+  text-shadow:0 1px 0 rgba(0,0,0,.6);
+  background:linear-gradient(var(--btn-face-1), var(--btn-face-2));
+  border:none; border-radius:2px;
+  padding:10px 13px;
+  cursor:pointer;
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.22),     /* светлая грань сверху */
+    inset 0 -4px 0 rgba(0,0,0,.35),          /* тёмная грань снизу */
+    inset 3px 0 0 rgba(255,255,255,.10),
+    inset -3px 0 0 rgba(0,0,0,.18),
+    0 0 0 3px #20160e,                        /* чёрная рамка */
+    0 4px 0 #20160e;                          /* «объём» снизу */
+  transition:filter .12s, transform .06s, box-shadow .06s;
+  user-select:none;
+}
+.btn:hover{ filter:brightness(1.14); }
+.btn:active{
+  transform:translateY(3px);
+  box-shadow:
+    inset 0 3px 0 rgba(0,0,0,.30),
+    inset 0 -2px 0 rgba(255,255,255,.10),
+    0 0 0 3px #20160e, 0 1px 0 #20160e;
+}
+.btn:disabled{ filter:grayscale(.6) brightness(.7); cursor:default; transform:none; }
+.btn.primary{ --btn-face-1:#4f7c3a; --btn-face-2:#3a5c2a; }
+.btn.danger { --btn-face-1:#8c3a2e; --btn-face-2:#6a281f; }
+.btn.sq{ padding:10px 12px; }
+.btn.tab.active{
+  --btn-face-1:#9a7443; --btn-face-2:#7a5a33;
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.30),
+    inset 0 -4px 0 rgba(0,0,0,.35),
+    0 0 0 3px #20160e, 0 4px 0 #20160e, 0 0 14px rgba(255,200,110,.35);
+}
+
+/* Маленькие иконочные кнопки (у полок) */
+.icon-btn{
+  width:26px; height:26px; padding:0;
+  font:11px/1 var(--font-pixel);
+  color:#e8cfa0; background:rgba(0,0,0,.28);
+  border:2px solid var(--wood-edge); border-radius:3px;
+  cursor:pointer; transition:.15s;
+}
+.icon-btn:hover{ background:rgba(217,164,65,.28); color:#ffe9c9; transform:translateY(-1px); }
+.icon-btn.danger:hover{ background:rgba(160,50,35,.45); }
+
+/* ---------- 5. Верхняя панель ---------- */
+.topbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:12px 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 120px),
+    linear-gradient(var(--wood-1), var(--wood-2));
+  border:3px solid var(--wood-edge);
+  box-shadow:inset 0 3px 0 rgba(255,220,160,.25), inset 0 -4px 0 rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.45);
+}
+.logo{
+  font:13px var(--font-pixel); color:#ffe9c9;
+  text-shadow:0 2px 0 rgba(0,0,0,.6), 0 0 16px rgba(255,200,120,.35);
+  white-space:nowrap;
+}
+.search-box{
+  flex:1; min-width:220px; display:flex; align-items:center; gap:8px;
+  background:#241708; border:3px solid var(--wood-edge);
+  box-shadow:inset 0 3px 6px rgba(0,0,0,.6);
+  padding:6px 10px; border-radius:2px;
+}
+.search-box .search-icon{ font-size:12px; filter:grayscale(.3); }
+.search-box input{
+  flex:1; background:transparent; border:none; outline:none;
+  font:9px var(--font-pixel); color:#ffe9c9; padding:4px 0;
+}
+.search-box input::placeholder{ color:rgba(255,233,201,.4); }
+.top-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+/* ---------- 6. Чипы-теги (фильтр по полкам) ---------- */
+.chips{ display:flex; gap:8px; flex-wrap:wrap; padding:2px 2px 0; }
+.chip{
+  font:8px var(--font-pixel); color:#e8cfa0;
+  background:linear-gradient(#5a4028,#43301d);
+  border:2px solid var(--wood-edge); border-radius:999px;
+  padding:7px 13px; cursor:pointer; transition:.15s;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.12);
+}
+.chip:hover{ color:#ffe9c9; transform:translateY(-1px); }
+.chip.active{
+  color:#2a1c0e; background:linear-gradient(#f0c56a,var(--gold));
+  border-color:#20160e; box-shadow:0 0 12px rgba(217,164,65,.45), inset 0 2px 0 rgba(255,255,255,.4);
+}
+
+/* ---------- 7. Полки и книги ---------- */
+.shelf-hall{ display:flex; flex-direction:column; gap:34px; padding-top:6px; }
+
+.shelf{ display:flex; flex-direction:column; gap:8px; }
+
+.shelf-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+/* Табличка с названием темы — деревянная вывеска */
+.shelf-sign{
+  display:inline-flex; align-items:center; gap:12px;
+  background:linear-gradient(#a3773f,#7c5628);
+  border:3px solid var(--wood-edge); border-radius:3px;
+  padding:9px 16px; cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,230,170,.3), inset 0 -4px 0 rgba(0,0,0,.35), 0 4px 0 rgba(0,0,0,.35);
+}
+.shelf-name{ font:10px var(--font-pixel); color:#ffe9c9; text-shadow:0 1px 0 rgba(0,0,0,.5); }
+.shelf-count{
+  font:8px var(--font-pixel); color:#2a1c0e;
+  background:var(--gold); border-radius:999px; padding:4px 8px;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);
+}
+.shelf-actions{ display:flex; gap:6px; }
+
+/* Ряды книг: каждый ряд стоит на своей доске */
+.shelf-rows{ display:flex; flex-direction:column; gap:26px; }
+.shelf-row .books{
+  display:flex; align-items:flex-end; gap:6px;
+  min-height:64px; padding:0 8px;
+}
+.plank{
+  height:20px; position:relative;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 2px, transparent 2px 150px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 6px),
+    linear-gradient(#9a6b3d, #7c5228 55%, #5e3d1d);
+  border:2px solid var(--wood-edge); border-radius:2px;
+  box-shadow:0 6px 0 rgba(0,0,0,.35), inset 0 2px 0 rgba(255,220,160,.25);
+}
+/* Тёмные «кронштейны» по краям доски */
+.plank::before,.plank::after{
+  content:''; position:absolute; top:100%; width:16px; height:10px;
+  background:#241505;
+}
+.plank::before{ left:14px; } .plank::after{ right:14px; }
+
+/* --- Корешок книги --- */
+.spine{
+  position:relative;
+  width:var(--w, 30px); height:var(--h, 150px);
+  padding:16px 2px 14px;
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid #1d120a; border-radius:3px 4px 3px 3px;
+  cursor:pointer;
+  background:
+    /* блик слева и тень справа — объём корешка */
+    linear-gradient(90deg,
+      rgba(0,0,0,.45) 0 2px,
+      rgba(255,255,255,.18) 2px 6px,
+      rgba(0,0,0,.05) 6px calc(100% - 6px),
+      rgba(0,0,0,.5) calc(100% - 6px)),
+    linear-gradient(var(--c,#8a5a3b), var(--c,#8a5a3b)),
+    linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.35));
+  box-shadow:0 4px 6px rgba(0,0,0,.4), inset 0 -8px 10px rgba(0,0,0,.25);
+  transition:transform .16s ease, filter .16s ease;
+  flex:0 0 auto;
+}
+.spine:hover{ transform:translateY(-10px) rotate(-1.5deg); filter:brightness(1.12); z-index:5; }
+/* Книгу «тянут» с полки перед раскрытием */
+.spine.pulled{ transform:translateY(-36px) rotate(-5deg) scale(1.05); z-index:9; filter:brightness(1.2); }
+/* Совпадение при поиске */
+.spine.hit{ box-shadow:0 0 0 2px var(--gold), 0 0 16px rgba(217,164,65,.65), 0 4px 6px rgba(0,0,0,.4); }
+
+/* Золотые полоски сверху и снизу корешка */
+.spine::before,.spine::after{
+  content:''; position:absolute; left:3px; right:3px; height:2px;
+  background:linear-gradient(90deg, transparent, rgba(255,215,140,.85), transparent);
+}
+.spine::before{ top:9px; } .spine::after{ bottom:9px; }
+
+.sp-title{
+  writing-mode:vertical-rl; text-orientation:mixed;
+  font:8px/1.2 var(--font-pixel); letter-spacing:1px;
+  color:rgba(255,240,210,.94);
+  text-shadow:0 1px 0 rgba(0,0,0,.65);
+  max-height:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  pointer-events:none;
+}
+.spine .seal{ /* значок подписанной книги */
+  position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  font-size:9px; color:var(--gold);
+  text-shadow:0 0 6px rgba(217,164,65,.8);
+  pointer-events:none;
+}
+
+/* Пустой слот «+» — поставить новую книгу */
+.slot-add{
+  width:46px; height:132px; flex:0 0 auto;
+  border:2px dashed rgba(255,230,180,.35); border-radius:4px;
+  background:rgba(0,0,0,.15);
+  color:rgba(255,230,180,.55); font:18px var(--font-pixel);
+  cursor:pointer; transition:.15s;
+  display:flex; align-items:center; justify-content:center;
+}
+.slot-add:hover{
+  border-color:var(--gold); color:var(--gold);
+  background:rgba(217,164,65,.12); transform:translateY(-4px);
+  box-shadow:0 0 14px rgba(217,164,65,.3);
+}
+
+/* Пустые состояния */
+.empty-note{ font:8px var(--font-pixel); color:rgba(255,233,201,.45); padding:14px 4px 30px; }
+.empty-state{
+  text-align:center; padding:60px 20px;
+  font:10px/2 var(--font-pixel); color:rgba(255,233,201,.6);
+  border:3px dashed rgba(255,233,201,.2); border-radius:6px;
+}
+
+/* ---------- 8. Нижняя подсказка ---------- */
+.hintbar{
+  display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  font:8px/1.8 var(--font-pixel); color:rgba(255,233,201,.55);
+  padding:8px 6px 0; border-top:2px solid rgba(0,0,0,.35);
+}
+
+/* ---------- 9. Оверлеи (общее) ---------- */
+.overlay,.modal-overlay{
+  position:fixed; inset:0; z-index:50;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .28s;
+}
+.overlay.show,.modal-overlay.show{ opacity:1; pointer-events:auto; }
+.modal-overlay{ z-index:60; }
+.overlay-backdrop{
+  position:absolute; inset:0;
+  background:radial-gradient(900px 600px at 50% 40%, rgba(30,18,8,.72), rgba(10,6,2,.9));
+  backdrop-filter:blur(2px);
+}
+.modal-overlay::before{
+  content:''; position:absolute; inset:0; background:rgba(10,6,2,.66);
+}
+
+/* ---------- 10. Сцена книги и тёплый свет ---------- */
+.book-scene{
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; align-items:center; gap:20px;
+  perspective:2600px;                 /* 3D для обложки и перелистывания */
+  padding:20px; max-height:100vh; overflow:auto;
+}
+.lamp-glow{
+  position:absolute; left:50%; top:44%; width:1200px; height:760px;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side, rgba(255,200,120,.20), transparent 72%);
+  pointer-events:none;
+}
+
+/* --- Книга (разворот) --- */
+.book{
+  position:relative; z-index:2;
+  width:calc(var(--half-w) * 2); height:var(--spread-h);
+  transform-style:preserve-3d;
+  transform:translateX(-25%);         /* закрытая книга — по центру экрана */
+  transition:transform .8s cubic-bezier(.3,.08,.25,1);
+}
+.book.opened{ transform:translateX(0); }
+
+/* Половины разворота (бумага) */
+.page-half{
+  position:absolute; top:0; width:var(--half-w); height:100%;
+  background:
+    radial-gradient(125% 105% at 50% 0%, var(--paper-1), var(--paper-2) 72%, #d9c394),
+    repeating-linear-gradient(90deg, rgba(120,90,50,.03) 0 1px, transparent 1px 4px);
+  border:3px solid #4a3319;
+  box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 0 30px rgba(120,85,40,.18);
+  opacity:0; transition:opacity .3s;
+}
+.book.opened .page-half{ opacity:1; transition-delay:.28s; }
+.page-half.left{ left:0; border-radius:8px 2px 2px 8px; }
+.page-half.right{ left:var(--half-w); border-radius:2px 8px 8px 2px; }
+/* Тень у корешка (склейки) */
+.page-half.left::after{
+  content:''; position:absolute; top:0; bottom:0; right:0; width:26px;
+  background:linear-gradient(90deg, transparent, rgba(80,55,25,.28));
+  pointer-events:none;
+}
+.page-half.right::after{
+  content:''; position:absolute; top:0; bottom:0; left:0; width:26px;
+  background:linear-gradient(270deg, transparent, rgba(80,55,25,.28));
+  pointer-events:none;
+}
+
+/* Стопки страниц по внешним краям */
+.stack{
+  position:absolute; top:8px; bottom:8px; width:9px; z-index:1;
+  background:repeating-linear-gradient(0deg, #efe3c2 0 2px, #c9b588 2px 4px);
+  border:2px solid #4a3319; pointer-events:none;
+  opacity:0; transition:opacity .3s .3s;
+}
+.book.opened .stack{ opacity:1; }
+.stack.left{ left:-6px; border-radius:4px 0 0 4px; }
+.stack.right{ right:-6px; border-radius:0 4px 4px 0; }
+
+/* Вертикальная склейка разворота */
+.book-spine-center{
+  position:absolute; left:calc(50% - 9px); top:2px; bottom:2px; width:18px; z-index:2;
+  background:linear-gradient(90deg, rgba(70,48,20,.0), rgba(70,48,20,.4) 45%, rgba(70,48,20,.4) 55%, rgba(70,48,20,0));
+  pointer-events:none;
+  opacity:0; transition:opacity .3s .4s;
+}
+.book.opened .book-spine-center{ opacity:1; }
+
+/* --- Обложка (открывается вращением) --- */
+.cover{
+  position:absolute; top:0; left:var(--half-w);
+  width:var(--half-w); height:100%;
+  transform-origin:left center;
+  transform-style:preserve-3d;
+  z-index:8;
+  transition:transform .85s cubic-bezier(.3,.08,.25,1), opacity .3s;
+}
+.book.opened .cover{
+  transform:rotateY(-168deg);
+  opacity:0; transition:transform .85s cubic-bezier(.3,.08,.25,1), opacity .3s .72s;
+}
+.cover .face{
+  position:absolute; inset:0; backface-visibility:hidden;
+  border-radius:4px 10px 10px 4px;
+  border:3px solid #241505;
+  box-shadow:0 22px 44px rgba(0,0,0,.6);
+}
+.cover-front{
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.4) 0 10px, rgba(255,255,255,.10) 10px 18px, transparent 18px),
+    linear-gradient(160deg, rgba(255,255,255,.14), transparent 40%),
+    var(--cover-c, #8a5a3b);
+  display:flex; align-items:center; justify-content:center;
+}
+.cover-back{
+  transform:rotateY(180deg);
+  background:linear-gradient(#cbb285,#b39a6e);
+  display:flex; align-items:center; justify-content:center;
+}
+.cover-inner-mark{ font-size:26px; color:rgba(90,60,25,.5); }
+.cover-frame{
+  width:82%; height:86%;
+  border:3px double rgba(255,225,160,.65);
+  outline:2px solid rgba(0,0,0,.35); outline-offset:3px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:18px; padding:16px; text-align:center;
+}
+.cover-gem{ color:var(--gold); font-size:14px; text-shadow:0 0 10px rgba(217,164,65,.7); }
+.cover-title{
+  font:12px/2 var(--font-pixel); color:#ffeecb;
+  text-shadow:0 2px 0 rgba(0,0,0,.6);
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+}
+.cover-author{ font:8px/1.8 var(--font-pixel); color:rgba(255,238,203,.75); }
+
+/* --- Лист перелистывания --- */
+.flip-sheet{
+  position:absolute; top:0; width:var(--half-w); height:100%;
+  transform-style:preserve-3d; z-index:6; pointer-events:none;
+}
+.flip-sheet .face{
+  position:absolute; inset:0; width:100%; height:100%;
+  backface-visibility:hidden; opacity:1;
+}
+.flip-sheet .face.back{ transform:rotateY(180deg); }
+
+/* ---------- 11. Типографика страниц (общая для контента и «измерителя») ---------- */
+.page-content,.page-measure{
+  font:15px/1.55 var(--font-book);
+  color:var(--ink);
+  overflow-wrap:break-word;
+  letter-spacing:.1px;
+}
+.page-content{
+  position:absolute;
+  left:var(--pad-x); right:var(--pad-x); top:var(--pad-top); bottom:var(--pad-bottom);
+  overflow:hidden;
+  opacity:0; transition:opacity .3s;
+}
+.book.opened .page-content{ opacity:1; transition-delay:.42s; }
+/* Измеритель пагинации: вне экрана, но с реальной шириной (ставит JS) */
+.page-measure{
+  position:fixed; left:-10000px; top:0; visibility:hidden; z-index:-1;
+}
+
+/* Блоки мини-разметки (пагинация меряет их высоту) */
+.ln{ padding:0 0 5px; margin:0; }
+.ln.empty{ height:1.55em; padding:0; }
+.ln.h1{ font-size:20px; font-weight:bold; line-height:1.3; padding:8px 0 10px; color:#4a3418; }
+.ln.h2{ font-size:17px; font-weight:bold; line-height:1.35; padding:6px 0 8px; color:#4a3418; }
+.ln.h3{ font-size:15px; font-weight:bold; font-variant:small-caps; padding:5px 0 7px; color:#5a4222; }
+.ln.li{ position:relative; padding-left:20px; }
+.ln.li .bullet{ position:absolute; left:3px; color:#7a5a33; }
+.ln.quote{
+  padding:3px 0 3px 13px; margin-left:2px;
+  border-left:3px solid rgba(122,85,50,.55);
+  font-style:italic; color:#5a4630;
+}
+.ln.hr{ height:16px; position:relative; padding:0; }
+.ln.hr span{
+  position:absolute; left:10%; right:10%; top:7px; height:2px;
+  background:linear-gradient(90deg, transparent, rgba(90,60,25,.55), transparent);
+}
+.page-content code,.page-measure code{
+  font:13px/1.4 ui-monospace,'Courier New',monospace;
+  background:rgba(90,60,25,.12); border:1px solid rgba(90,60,25,.2);
+  padding:0 4px; border-radius:3px;
+}
+.page-content a{ color:#7a4a1f; text-decoration:underline; }
+.page-content strong{ color:#33240f; }
+
+/* Номер страницы внизу */
+.page-foot{
+  position:absolute; left:0; right:0; bottom:14px;
+  text-align:center; font:9px var(--font-pixel); color:rgba(90,60,25,.65);
+  opacity:0; transition:opacity .3s;
+}
+.book.opened .page-foot{ opacity:1; transition-delay:.42s; }
+
+/* Пустая страница */
+.page-content.blank{ display:flex; align-items:center; justify-content:center; }
+.blank-orn{ font-size:24px; color:rgba(90,60,25,.35); }
+
+/* --- Титульная страница подписанной книги --- */
+.title-page{
+  height:100%; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px; text-align:center;
+}
+.tp-orn{ color:var(--gold); font-size:14px; letter-spacing:6px; text-shadow:0 0 8px rgba(217,164,65,.4); }
+.tp-title{ font:bold 26px/1.35 var(--font-book); color:#43301a; padding:0 8px; }
+.tp-line{ width:55%; height:2px; background:linear-gradient(90deg, transparent, rgba(90,60,25,.6), transparent); }
+.tp-author{ font:italic 16px var(--font-book); color:#5a4630; }
+.tp-date{ font:12px var(--font-book); color:rgba(90,60,25,.75); }
+
+/* ---------- 12. Лист редактирования ---------- */
+.edit-sheet{
+  position:absolute; inset:0; z-index:3;
+  display:none; flex-direction:column;
+  background:
+    radial-gradient(125% 105% at 50% 0%, var(--paper-1), var(--paper-2) 72%, #d9c394);
+  border:3px solid #4a3319; border-radius:8px;
+  box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 0 30px rgba(120,85,40,.18);
+  padding:18px 26px 12px;
+  opacity:0; transition:opacity .3s;
+}
+.book.mode-edit .edit-sheet{ display:flex; }
+.book.opened.mode-edit .edit-sheet{ opacity:1; transition-delay:.42s; }
+/* Пунктирная линия сгиба посередине — сохраняем «книжность» */
+.edit-sheet::before{
+  content:''; position:absolute; top:10px; bottom:10px; left:50%;
+  border-left:2px dashed rgba(90,60,25,.25); pointer-events:none;
+}
+
+.edit-top{ display:flex; gap:12px; flex-wrap:wrap; }
+.ed-title,.ed-author,.ed-shelf{
+  font:10px var(--font-pixel); color:var(--ink);
+  background:rgba(255,252,240,.65);
+  border:2px solid rgba(90,60,25,.5); border-radius:3px;
+  padding:9px 10px; outline:none;
+  box-shadow:inset 0 2px 4px rgba(90,60,25,.15);
+}
+.ed-title{ flex:2; min-width:200px; font-weight:bold; }
+.ed-author{ flex:1; min-width:130px; }
+.ed-title:focus,.ed-author:focus,.ed-shelf:focus,.ed-text:focus{ border-color:var(--gold); box-shadow:0 0 0 2px rgba(217,164,65,.3); }
+
+.edit-mid{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
+.mini-label{ font:8px var(--font-pixel); color:#6b5230; }
+.ed-shelf{ font-size:9px; cursor:pointer; }
+
+/* Палитра цветов переплёта */
+.swatches{ display:flex; gap:5px; flex-wrap:wrap; }
+.sw{
+  width:20px; height:20px; border:2px solid #241505; border-radius:3px;
+  background:var(--c); cursor:pointer; padding:0; transition:.12s;
+}
+.sw:hover{ transform:translateY(-2px) scale(1.1); }
+.sw.active{ box-shadow:0 0 0 2px var(--gold), 0 0 10px rgba(217,164,65,.6); }
+
+.ed-text{
+  flex:1; margin-top:12px; min-height:120px;
+  font:15px/1.6 var(--font-book); color:var(--ink);
+  background:rgba(255,252,240,.4);
+  border:2px solid rgba(90,60,25,.4); border-radius:4px;
+  padding:14px 16px; resize:none; outline:none;
+  box-shadow:inset 0 2px 8px rgba(90,60,25,.12);
+}
+.ed-text::placeholder{ color:rgba(90,60,25,.45); font-style:italic; }
+
+.edit-bottom{ display:flex; justify-content:space-between; gap:10px; padding:8px 2px 2px; }
+.save-state,.pages-est{ font:8px var(--font-pixel); color:#6b5230; }
+.save-state.typing{ color:#9a6b1f; }
+
+/* ---------- 13. Панель инструментов книги ---------- */
+.book-toolbar{
+  position:relative; z-index:2;
+  width:calc(var(--half-w) * 2); max-width:96vw;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; flex-wrap:wrap;
+  padding:12px 14px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.12) 0 2px, transparent 2px 110px),
+    linear-gradient(var(--wood-1), var(--wood-2));
+  border:3px solid var(--wood-edge); border-radius:4px;
+  box-shadow:inset 0 3px 0 rgba(255,220,160,.22), inset 0 -4px 0 rgba(0,0,0,.35), 0 10px 24px rgba(0,0,0,.5);
+}
+.tb-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.page-label{
+  font:9px var(--font-pixel); color:#ffe9c9;
+  background:rgba(0,0,0,.3); border:2px solid var(--wood-edge); border-radius:3px;
+  padding:8px 12px; white-space:nowrap;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.5);
+}
+
+/* ---------- 14. Модалки ---------- */
+.modal{
+  position:relative; z-index:2;
+  width:min(460px, 92vw);
+  background:
+    radial-gradient(120% 100% at 50% 0%, var(--paper-1), var(--paper-2));
+  border:4px solid var(--wood-edge); border-radius:6px;
+  box-shadow:
+    inset 0 0 0 3px rgba(255,240,205,.5),
+    inset 0 0 30px rgba(120,85,40,.2),
+    0 24px 60px rgba(0,0,0,.6);
+  padding:22px 24px 20px;
+  color:var(--ink);
+  transform:translateY(14px) scale(.97); transition:transform .22s;
+  max-height:92vh; overflow:auto;
+}
+.modal-overlay.show .modal{ transform:translateY(0) scale(1); }
+.modal-title{
+  font:12px/1.6 var(--font-pixel); color:#43301a; text-align:center;
+  padding-bottom:12px; margin-bottom:16px;
+  border-bottom:3px double rgba(90,60,25,.5);
+}
+.modal-text{ font:13px/1.7 var(--font-book); color:#4d3a22; padding:4px 2px 14px; }
+
+.field{ display:block; margin-bottom:14px; }
+.field span{ display:block; font:9px var(--font-pixel); color:#6b5230; margin-bottom:7px; }
+.field input{
+  width:100%; font:12px var(--font-book); color:var(--ink);
+  background:rgba(255,252,240,.75);
+  border:2px solid rgba(90,60,25,.5); border-radius:3px;
+  padding:10px 12px; outline:none;
+  box-shadow:inset 0 2px 4px rgba(90,60,25,.15);
+}
+.field input:focus{ border-color:var(--gold); box-shadow:0 0 0 2px rgba(217,164,65,.3); }
+
+/* Предупреждение о подписании */
+.warn-box{
+  font:12px/1.65 var(--font-book); color:#6d2f1d;
+  background:rgba(190,80,50,.12);
+  border:2px solid rgba(150,60,35,.5); border-left-width:6px; border-radius:3px;
+  padding:11px 13px; margin:4px 0 16px;
+}
+
+.modal-actions{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+
+/* Мини-книжка в модалке подписи */
+.modal-book{
+  width:74px; height:96px; margin:0 auto 18px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.4) 0 5px, rgba(255,255,255,.15) 5px 9px, transparent 9px),
+    var(--cover-c, #8a5a3b);
+  border:3px solid #241505; border-radius:3px 6px 6px 3px;
+  box-shadow:0 8px 18px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,225,160,.35);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--gold); font-size:16px; text-shadow:0 0 8px rgba(217,164,65,.8);
+}
+.modal-book span{ outline:2px double rgba(255,225,160,.6); outline-offset:6px; padding:10px 14px; }
+
+/* ---------- 15. Тост ---------- */
+#toast{
+  position:fixed; left:50%; bottom:34px; z-index:100;
+  transform:translate(-50%, 26px);
+  font:9px var(--font-pixel); color:#ffe9c9;
+  background:linear-gradient(var(--btn-face-1), var(--btn-face-2));
+  border-radius:3px; padding:13px 18px;
+  box-shadow:0 0 0 3px #20160e, 0 8px 20px rgba(0,0,0,.5), inset 0 3px 0 rgba(255,255,255,.2);
+  opacity:0; pointer-events:none;
+  transition:opacity .25s, transform .25s;
+  max-width:88vw; text-align:center; line-height:1.7;
+}
+#toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+/* ---------- 16. Адаптив (desktop-first: уменьшаем книгу) ---------- */
+@media (max-width:1340px){
+  :root{ --half-w:400px; --spread-h:540px; }
+}
+@media (max-width:1150px){
+  :root{ --half-w:360px; --spread-h:510px; }
+  .topbar{ gap:10px; }
+  .logo{ width:100%; text-align:center; }
+}
+@media (max-width:920px){
+  :root{ --half-w:300px; --spread-h:470px; --pad-x:24px; --pad-top:22px; --pad-bottom:40px; }
+  .page-content,.page-measure{ font-size:13.5px; }
+  .ed-text{ font-size:13.5px; }
+  .lantern{ display:none; }
+}
+@media (max-width:700px){
+  :root{ --half-w:calc(50vw - 26px); --spread-h:440px; --pad-x:16px; }
+  .book-toolbar{ justify-content:center; }
+  .top-actions{ width:100%; justify-content:center; }
+  .room{ padding:0 10px 24px; }
+}
+
+/* ---------- 17. Уважение к prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Домашняя библиотека — пиксельный редактор заметок</title>
+  <meta name="description" content="Редактор заметок в интерфейсе домашней библиотеки: полки-темы, книги-заметки, подписание книг. Работает без сервера, данные в localStorage.">
+  <!-- Пиксельный шрифт (если офлайн — сработает запасной monospace из CSS) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Фавиконка-эмодзи (data URI, без внешних файлов) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- «Пылинки» в тёплом свете (генерируются в JS) -->
+  <div id="dust" aria-hidden="true"></div>
+
+  <!-- Фонарики для уюта -->
+  <div class="lantern left" aria-hidden="true">🏮</div>
+  <div class="lantern right" aria-hidden="true">🏮</div>
+
+  <div class="room">
+
+    <!-- ======= Верхняя панель ======= -->
+    <header class="topbar">
+      <div class="logo">📚 Моя библиотека</div>
+
+      <div class="search-box" title="Поиск по названию, автору и содержимому">
+        <span class="search-icon">🔍</span>
+        <input id="search" type="text" placeholder="Поиск по названию и тексту…" autocomplete="off">
+      </div>
+
+      <div class="top-actions">
+        <button class="btn" id="btn-new-book" title="Создать новую книгу">＋ Книга</button>
+        <button class="btn" id="btn-add-shelf" title="Добавить полку (тему)">＋ Полка</button>
+        <button class="btn" id="btn-export-lib" title="Скачать всю библиотеку в JSON">⬇ JSON</button>
+        <button class="btn" id="btn-import-lib" title="Загрузить библиотеку из JSON">⬆ Импорт</button>
+        <input type="file" id="file-import" accept="application/json,.json" hidden>
+      </div>
+    </header>
+
+    <!-- ======= Фильтр по темам (чипы-теги) ======= -->
+    <nav class="chips" id="filter-chips" aria-label="Фильтр по полкам"></nav>
+
+    <!-- ======= Зал библиотеки: полки и книги (рендерится в JS) ======= -->
+    <main class="shelf-hall" id="shelves"></main>
+
+    <!-- ======= Нижняя подсказка ======= -->
+    <footer class="hintbar">
+      <span id="stats">…</span>
+      <span class="hints">Esc — закрыть · ←/→ — листать · Ctrl+S — сохранить</span>
+    </footer>
+  </div>
+
+  <!-- =====================================================
+       ОВЕРЛЕЙ КНИГИ: 3D-раскрытие, разворот, режимы чтения/правки
+       ===================================================== -->
+  <div class="overlay" id="book-overlay" hidden>
+    <div class="overlay-backdrop"></div>
+
+    <div class="book-scene">
+      <div class="lamp-glow" aria-hidden="true"></div>
+
+      <div class="book" id="book">
+        <!-- Стопки страниц по краям (декор) -->
+        <div class="stack left" aria-hidden="true"></div>
+        <div class="stack right" aria-hidden="true"></div>
+
+        <!-- Левая и правая половины разворота (содержимое задаёт JS) -->
+        <div class="page-half left" id="page-left"></div>
+        <div class="page-half right" id="page-right"></div>
+
+        <!-- Корешок-склейка посередине -->
+        <div class="book-spine-center" aria-hidden="true"></div>
+
+        <!-- Лист редактирования (одно поле со скроллом, поверх разворота) -->
+        <div class="edit-sheet" id="edit-sheet">
+          <div class="edit-top">
+            <input id="ed-title" class="ed-title" type="text" maxlength="48" placeholder="Заглавие книги…" aria-label="Заглавие">
+            <input id="ed-author" class="ed-author" type="text" maxlength="32" placeholder="Автор…" aria-label="Автор">
+          </div>
+          <div class="edit-mid">
+            <label class="mini-label" for="ed-shelf">Полка</label>
+            <select id="ed-shelf" class="ed-shelf" aria-label="Полка (тема)"></select>
+            <div class="swatches" id="ed-swatches" aria-label="Цвет переплёта"></div>
+          </div>
+          <textarea id="ed-text" class="ed-text" spellcheck="true" aria-label="Текст книги"
+            placeholder="Пишите здесь…
+
+Мини-разметка:
+# Заголовок, ## Подзаголовок
+**жирный**, *курсив*, `код`, ~~зачёркнутый~~
+- пункт списка
+> цитата
+--- разделитель
+[ссылка](https://example.com)"></textarea>
+          <div class="edit-bottom">
+            <span id="ed-status" class="save-state">✓ Сохранено</span>
+            <span id="ed-pages" class="pages-est"></span>
+          </div>
+        </div>
+
+        <!-- Лист для анимации перелистывания (передняя/задняя сторона) -->
+        <div class="flip-sheet" id="flip-sheet" hidden aria-hidden="true">
+          <div class="face front page-half" id="flip-front"></div>
+          <div class="face back page-half" id="flip-back"></div>
+        </div>
+
+        <!-- Обложка (вращается при открытии/закрытии) -->
+        <div class="cover" id="cover" aria-hidden="true">
+          <div class="face cover-front">
+            <div class="cover-frame">
+              <span class="cover-gem">✦</span>
+              <div class="cover-title" id="cover-title">Без названия</div>
+              <div class="cover-author" id="cover-author"></div>
+              <span class="cover-gem bottom">✦</span>
+            </div>
+          </div>
+          <div class="face cover-back"><span class="cover-inner-mark">❦</span></div>
+        </div>
+      </div>
+
+      <!-- ======= Панель инструментов книги ======= -->
+      <div class="book-toolbar" id="book-toolbar">
+        <div class="tb-group">
+          <button class="btn tab" id="btn-mode-read" title="Режим чтения с постраничным разворотом">📖 Читать</button>
+          <button class="btn tab" id="btn-mode-edit" title="Редактирование одним полем">✏ Править</button>
+        </div>
+
+        <div class="tb-group" id="tb-nav">
+          <button class="btn sq" id="btn-prev" aria-label="Предыдущая страница">◀</button>
+          <span class="page-label" id="page-label">Страница 1 из 1</span>
+          <button class="btn sq" id="btn-next" aria-label="Следующая страница">▶</button>
+        </div>
+
+        <div class="tb-group">
+          <button class="btn" id="btn-sign" title="Подписать книгу (после этого она станет read-only)">✒ Подписать</button>
+          <button class="btn" id="btn-unsign" title="Снять подпись (с подтверждением)" hidden>🔓 Снять подпись</button>
+          <button class="btn" id="btn-md" title="Скачать книгу как .md">⬇ .md</button>
+          <button class="btn danger" id="btn-del" title="Удалить книгу">✖</button>
+          <button class="btn primary" id="btn-done" title="Закрыть книгу (Esc)">Готово</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Скрытый «измеритель» для пагинации: та же типографика, что и страница -->
+    <div class="page-measure" id="page-measure" aria-hidden="true"></div>
+  </div>
+
+  <!-- =====================================================
+       МОДАЛКА ПОДПИСИ (как в Minecraft: Заглавие / Автор)
+       ===================================================== -->
+  <div class="modal-overlay" id="sign-modal" hidden>
+    <div class="modal sign-modal" role="dialog" aria-modal="true" aria-labelledby="sign-title-label">
+      <div class="modal-title" id="sign-title-label">✒ Подписать книгу</div>
+
+      <div class="modal-book" id="sign-book-preview" aria-hidden="true"><span>✦</span></div>
+
+      <label class="field">
+        <span>Заглавие книги</span>
+        <input id="sign-title" type="text" maxlength="48" placeholder="О чём эта книга?">
+      </label>
+
+      <label class="field">
+        <span>Автор</span>
+        <input id="sign-author" type="text" maxlength="32" placeholder="Кто написал">
+      </label>
+
+      <div class="warn-box">
+        ⚠ После подписания книгу <b>нельзя редактировать</b>. Подпись можно будет снять только отдельным подтверждением.
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" id="sign-cancel">Отмена</button>
+        <button class="btn primary" id="sign-ok">Подписать и закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= Универсальное подтверждение ======= -->
+  <div class="modal-overlay" id="confirm-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-title" id="cf-title">Вы уверены?</div>
+      <div class="modal-text" id="cf-text"></div>
+      <div class="modal-actions">
+        <button class="btn" id="cf-cancel">Отмена</button>
+        <button class="btn danger" id="cf-ok">Да</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= Универсальный ввод (название полки и т.п.) ======= -->
+  <div class="modal-overlay" id="prompt-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-title" id="pr-title">Введите название</div>
+      <label class="field">
+        <span id="pr-label">Название</span>
+        <input id="pr-input" type="text" maxlength="40">
+      </label>
+      <div class="modal-actions">
+        <button class="btn" id="pr-cancel">Отмена</button>
+        <button class="btn primary" id="pr-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= Всплывающее уведомление ======= -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <div style="padding:40px;text-align:center;color:#ffe9c9;font-family:monospace">
+      Для работы библиотеки нужен включённый JavaScript.
+    </div>
+  </noscript>
+
+  <script src="script.js"></script>
+</body>
+</html>
